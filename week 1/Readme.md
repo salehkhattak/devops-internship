@@ -15,6 +15,8 @@ Both services expose health and informational endpoints and are containerized wi
 
 This project follows a simple microservices-style architecture designed for learning and internship demonstrations.
 
+![Architecture Diagram](architecture.png)
+
 ### High-level design
 
 ```mermaid
