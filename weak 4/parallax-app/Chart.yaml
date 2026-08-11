@@ -1,0 +1,6 @@
+apiVersion: v2
+name: parallax-app
+description: Helm chart for deploying the Parallax internship frontend and backend microservices
+type: application
+version: 0.1.0
+appVersion: "1.16.0"

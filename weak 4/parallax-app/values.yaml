@@ -1,0 +1,148 @@
+# Default values for parallax-app.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# --------------------------------------------------
+# Replica Configuration
+# --------------------------------------------------
+replicaCount: 2
+
+# --------------------------------------------------
+# Container Image
+# --------------------------------------------------
+image:
+  repository: salehktk005/simple-node-app
+  # Image pull policy
+  pullPolicy: IfNotPresent
+  # Docker image tag
+  tag: "v1"
+
+# --------------------------------------------------
+# Image Pull Secrets
+# --------------------------------------------------
+imagePullSecrets: []
+
+# --------------------------------------------------
+# Chart Name Overrides
+# --------------------------------------------------
+nameOverride: ""
+fullnameOverride: ""
+
+# --------------------------------------------------
+# Service Account
+# --------------------------------------------------
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount ServiceAccount's API credentials
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # Name of the service account
+  name: ""
+
+# --------------------------------------------------
+# Pod Configuration
+# --------------------------------------------------
+podAnnotations: {}
+podLabels: {}
+
+# --------------------------------------------------
+# Pod Security Context
+# --------------------------------------------------
+podSecurityContext: {}
+# Example:
+# fsGroup: 2000
+
+# --------------------------------------------------
+# Container Security Context
+# --------------------------------------------------
+securityContext: {}
+# Example:
+# capabilities:
+#   drop:
+#     - ALL
+# readOnlyRootFilesystem: true
+# runAsNonRoot: true
+# runAsUser: 1000
+
+# --------------------------------------------------
+# Service Configuration
+# --------------------------------------------------
+service:
+  # Frontend is exposed outside the cluster
+  type: NodePort
+  # Service port
+  port: 3000
+
+# --------------------------------------------------
+# Ingress Configuration
+# --------------------------------------------------
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+# --------------------------------------------------
+# Resource Requests and Limits
+# --------------------------------------------------
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# --------------------------------------------------
+# Liveness Probe
+# --------------------------------------------------
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 3000
+  initialDelaySeconds: 10
+  periodSeconds: 10
+
+# --------------------------------------------------
+# Readiness Probe
+# --------------------------------------------------
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+# --------------------------------------------------
+# Autoscaling
+# --------------------------------------------------
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# --------------------------------------------------
+# Additional Volumes
+# --------------------------------------------------
+volumes: []
+
+# --------------------------------------------------
+# Additional Volume Mounts
+# --------------------------------------------------
+volumeMounts: []
+
+# --------------------------------------------------
+# Node Scheduling
+# --------------------------------------------------
+nodeSelector: {}
+tolerations: []
+affinity: {}
