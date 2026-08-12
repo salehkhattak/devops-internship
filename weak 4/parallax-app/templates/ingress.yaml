@@ -35,9 +35,9 @@ spec:
             {{- end }}
             backend:
               service:
-                name: {{ include "parallax-app.fullname" $ }}
+                name: {{ if eq .serviceName "backend" }}{{ include "parallax-app.backend.fullname" $ }}{{ else }}{{ include "parallax-app.frontend.fullname" $ }}{{ end }}
                 port:
-                  number: {{ $.Values.service.port }}
+                  number: {{ if eq .serviceName "backend" }}{{ $.Values.backend.service.port }}{{ else }}{{ $.Values.frontend.service.port }}{{ end }}
           {{- end }}
     {{- end }}
 {{- end }}

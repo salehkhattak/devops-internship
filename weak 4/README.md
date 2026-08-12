@@ -1,21 +1,23 @@
-# Week 4: Helm Chart Package & Kubernetes Deployment
+# Week 4: Custom Helm Chart Package & Multi-Service Kubernetes Deployment
 
 ## 📋 Overview
 
-This project demonstrates packaging and deploying a Node.js microservice application using **Helm** (Kubernetes Package Manager).
+This project demonstrates packaging and deploying a multi-service Node.js application using **Helm** (Kubernetes Package Manager).
 
-The Helm chart packages all Kubernetes resources required to run the `parallax-app` application, including:
-* Deployment with replica management, custom image, resource limits, and health probes
-* NodePort Service for external network exposure
-* ServiceAccount with auto-mounted API tokens
-* Support for HorizontalPodAutoscaler (HPA) and Ingress configurations
+The Helm chart abstracts and manages all Kubernetes resources required for both **Frontend** and **Backend** microservices in the `parallax-app` architecture:
+* **Frontend Microservice Deployment & NodePort Service** (Port 3000, 2 replicas)
+* **Backend Microservice Deployment & ClusterIP Service** (Port 5000, 2 replicas)
+* **Shared ConfigMap Resource** (`app-config` for `APP_ENV` and `BACKEND_URL`)
+* **Shared Secret Resource** (`app-secret` for `API_KEY`)
+* **ServiceAccount with API credentials**
+* **Support for HorizontalPodAutoscaler (HPA) and Ingress configurations**
 
 ---
 
 ## 📂 Project Structure
 
 ```text
-week 4/
+weak 4/
 └── parallax-app/
     ├── Chart.yaml
     ├── values.yaml
@@ -23,11 +25,14 @@ week 4/
     ├── charts/
     └── templates/
         ├── _helpers.tpl
-        ├── deployment.yaml
+        ├── frontend-deployment.yaml
+        ├── frontend-service.yaml
+        ├── backend-deployment.yaml
+        ├── backend-service.yaml
+        ├── configmap.yaml
+        ├── secret.yaml
         ├── hpa.yaml
         ├── ingress.yaml
-        ├── NOTES.txt
-        ├── service.yaml
         ├── serviceaccount.yaml
         └── tests/
             └── test-connection.yaml
@@ -37,22 +42,55 @@ week 4/
 
 ## 🏗️ Chart Configuration (`values.yaml`)
 
+### Global & Shared Resources
+
 | Parameter | Default Value | Description |
 | --------- | ------------- | ----------- |
-| `replicaCount` | `2` | Number of pod replicas |
-| `image.repository` | `salehktk005/simple-node-app` | Docker image repository |
-| `image.tag` | `"v1"` | Image tag |
-| `image.pullPolicy` | `IfNotPresent` | Image pull strategy |
-| `service.type` | `NodePort` | Kubernetes service type |
-| `service.port` | `3000` | Exposed service port |
-| `resources.requests.cpu` | `250m` | Requested CPU allocation |
-| `resources.requests.memory` | `256Mi` | Requested Memory allocation |
-| `resources.limits.cpu` | `500m` | Maximum CPU limit |
-| `resources.limits.memory` | `512Mi` | Maximum Memory limit |
-| `livenessProbe.httpGet.path` | `/health` | Liveness health check path |
-| `livenessProbe.httpGet.port` | `3000` | Liveness health check port |
-| `readinessProbe.httpGet.path` | `/health` | Readiness check path |
-| `readinessProbe.httpGet.port` | `3000` | Readiness check port |
+| `serviceAccount.create` | `true` | Create dedicated ServiceAccount |
+| `configMap.enabled` | `true` | Generate shared ConfigMap resource |
+| `configMap.name` | `"app-config"` | ConfigMap resource name |
+| `secret.enabled` | `true` | Generate shared Secret resource |
+| `secret.name` | `"app-secret"` | Secret resource name |
+
+### Frontend Microservice (`frontend`)
+
+| Parameter | Default Value | Description |
+| --------- | ------------- | ----------- |
+| `frontend.enabled` | `true` | Enable Frontend microservice deployment |
+| `frontend.replicaCount` | `2` | Number of frontend pod replicas |
+| `frontend.image.repository` | `salehktk005/simple-node-app` | Frontend Docker image repository |
+| `frontend.image.tag` | `"v1"` | Frontend image tag |
+| `frontend.containerPort` | `3000` | Port container listens on |
+| `frontend.service.type` | `NodePort` | Kubernetes service type for external access |
+| `frontend.service.port` | `3000` | Exposed service port |
+| `frontend.env.PORT` | `"3000"` | Container PORT environment variable |
+| `frontend.env.SERVICE_NAME` | `"frontend"` | Container SERVICE_NAME environment variable |
+| `frontend.resources.requests.cpu` | `250m` | Requested CPU allocation |
+| `frontend.resources.requests.memory` | `256Mi` | Requested Memory allocation |
+| `frontend.resources.limits.cpu` | `500m` | Maximum CPU limit |
+| `frontend.resources.limits.memory` | `512Mi` | Maximum Memory limit |
+| `frontend.livenessProbe.httpGet.path` | `/health` | Liveness probe endpoint |
+| `frontend.readinessProbe.httpGet.path` | `/health` | Readiness probe endpoint |
+
+### Backend Microservice (`backend`)
+
+| Parameter | Default Value | Description |
+| --------- | ------------- | ----------- |
+| `backend.enabled` | `true` | Enable Backend microservice deployment |
+| `backend.replicaCount` | `2` | Number of backend pod replicas |
+| `backend.image.repository` | `salehktk005/simple-node-app` | Backend Docker image repository |
+| `backend.image.tag` | `"v1"` | Backend image tag |
+| `backend.containerPort` | `5000` | Port container listens on |
+| `backend.service.type` | `ClusterIP` | Kubernetes service type for internal access |
+| `backend.service.port` | `5000` | Internal exposed service port |
+| `backend.env.PORT` | `"5000"` | Container PORT environment variable |
+| `backend.env.SERVICE_NAME` | `"backend"` | Container SERVICE_NAME environment variable |
+| `backend.resources.requests.cpu` | `250m` | Requested CPU allocation |
+| `backend.resources.requests.memory` | `256Mi` | Requested Memory allocation |
+| `backend.resources.limits.cpu` | `500m` | Maximum CPU limit |
+| `backend.resources.limits.memory` | `512Mi` | Maximum Memory limit |
+| `backend.livenessProbe.httpGet.path` | `/health` | Liveness probe endpoint |
+| `backend.readinessProbe.httpGet.path` | `/health` | Readiness probe endpoint |
 
 ---
 
@@ -60,7 +98,7 @@ week 4/
 
 ### 1. Lint Chart
 
-Verify that the chart is free of syntax and structural errors:
+Verify that the chart templates and values are structurally sound:
 
 ```bash
 helm lint ./parallax-app
@@ -68,7 +106,7 @@ helm lint ./parallax-app
 
 ### 2. Render Templates (Dry Run)
 
-Preview the generated Kubernetes manifests without deploying to a cluster:
+Preview all generated Kubernetes manifests for both frontend and backend microservices:
 
 ```bash
 helm template parallax-release ./parallax-app
@@ -90,7 +128,15 @@ Apply updated configurations:
 helm upgrade parallax-release ./parallax-app -n parallax
 ```
 
-### 5. Uninstall Release
+### 5. Test Release Connection
+
+Run Helm test hook to verify service health:
+
+```bash
+helm test parallax-release -n parallax
+```
+
+### 6. Uninstall Release
 
 Clean up deployed resources:
 
@@ -102,13 +148,11 @@ helm uninstall parallax-release -n parallax
 
 ## ⚠️ Issues Identified & Resolution
 
-### Root Cause
-`helm lint` previously failed with the error:
-`Error unable to check Chart.yaml file in chart... Chart.yaml file is missing`
+### Refactoring Default Boilerplate to Custom Microservices Chart
 
-The `Chart.yaml` file was incorrectly placed inside the subchart directory (`charts/Chart.yaml`) instead of the chart's root directory (`parallax-app/Chart.yaml`).
-
-### Resolution
-1. Created the root `Chart.yaml` with chart metadata (`apiVersion: v2`, `name: parallax-app`, `version: 0.1.0`, `appVersion: "1.16.0"`).
-2. Removed the misplaced `charts/Chart.yaml`.
-3. Verified chart syntax and rendering with `helm lint` and `helm template`.
+1. **Problem**: The original chart used the default single-deployment boilerplate (`deployment.yaml` and `service.yaml`) from `helm create`, which did not abstract separate frontend and backend microservices.
+2. **Resolution**:
+   * Designed concrete dedicated templates for `frontend-deployment.yaml`, `frontend-service.yaml`, `backend-deployment.yaml`, and `backend-service.yaml`.
+   * Added `configmap.yaml` and `secret.yaml` templates driven by `values.yaml`.
+   * Added dedicated helper functions in `_helpers.tpl` for labels and selectors for both microservices.
+   * Updated `hpa.yaml`, `ingress.yaml`, `NOTES.txt`, and test hooks to handle multi-service deployments seamlessly.

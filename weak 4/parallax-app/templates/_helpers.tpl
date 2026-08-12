@@ -60,3 +60,60 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Frontend Fullname
+*/}}
+{{- define "parallax-app.frontend.fullname" -}}
+{{- printf "%s-frontend" (include "parallax-app.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Backend Fullname
+*/}}
+{{- define "parallax-app.backend.fullname" -}}
+{{- printf "%s-backend" (include "parallax-app.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Frontend Labels
+*/}}
+{{- define "parallax-app.frontend.labels" -}}
+helm.sh/chart: {{ include "parallax-app.chart" . }}
+{{ include "parallax-app.frontend.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Backend Labels
+*/}}
+{{- define "parallax-app.backend.labels" -}}
+helm.sh/chart: {{ include "parallax-app.chart" . }}
+{{ include "parallax-app.backend.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Frontend Selector Labels
+*/}}
+{{- define "parallax-app.frontend.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "parallax-app.name" . }}-frontend
+app.kubernetes.io/instance: {{ .Release.Name }}
+app: frontend
+{{- end }}
+
+{{/*
+Backend Selector Labels
+*/}}
+{{- define "parallax-app.backend.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "parallax-app.name" . }}-backend
+app.kubernetes.io/instance: {{ .Release.Name }}
+app: backend
+{{- end }}
+

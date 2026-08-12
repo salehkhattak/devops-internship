@@ -1,29 +1,8 @@
 # Default values for parallax-app.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# Configuration for Frontend and Backend microservices.
 
 # --------------------------------------------------
-# Replica Configuration
-# --------------------------------------------------
-replicaCount: 2
-
-# --------------------------------------------------
-# Container Image
-# --------------------------------------------------
-image:
-  repository: salehktk005/simple-node-app
-  # Image pull policy
-  pullPolicy: IfNotPresent
-  # Docker image tag
-  tag: "v1"
-
-# --------------------------------------------------
-# Image Pull Secrets
-# --------------------------------------------------
-imagePullSecrets: []
-
-# --------------------------------------------------
-# Chart Name Overrides
+# Chart Overrides
 # --------------------------------------------------
 nameOverride: ""
 fullnameOverride: ""
@@ -32,48 +11,123 @@ fullnameOverride: ""
 # Service Account
 # --------------------------------------------------
 serviceAccount:
-  # Specifies whether a service account should be created
   create: true
-  # Automatically mount ServiceAccount's API credentials
   automount: true
-  # Annotations to add to the service account
   annotations: {}
-  # Name of the service account
   name: ""
 
 # --------------------------------------------------
-# Pod Configuration
+# ConfigMap Configuration
 # --------------------------------------------------
-podAnnotations: {}
-podLabels: {}
+configMap:
+  enabled: true
+  name: "app-config"
+  data:
+    APP_ENV: "production"
+    BACKEND_URL: "http://backend-service:5000"
 
 # --------------------------------------------------
-# Pod Security Context
+# Secret Configuration
 # --------------------------------------------------
-podSecurityContext: {}
-# Example:
-# fsGroup: 2000
+secret:
+  enabled: true
+  name: "app-secret"
+  data:
+    API_KEY: "parallax123"
 
 # --------------------------------------------------
-# Container Security Context
+# Frontend Microservice Configuration
 # --------------------------------------------------
-securityContext: {}
-# Example:
-# capabilities:
-#   drop:
-#     - ALL
-# readOnlyRootFilesystem: true
-# runAsNonRoot: true
-# runAsUser: 1000
+frontend:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: salehktk005/simple-node-app
+    pullPolicy: IfNotPresent
+    tag: "v1"
+  service:
+    type: NodePort
+    port: 3000
+  containerPort: 3000
+  env:
+    PORT: "3000"
+    SERVICE_NAME: "frontend"
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
 # --------------------------------------------------
-# Service Configuration
+# Backend Microservice Configuration
 # --------------------------------------------------
-service:
-  # Frontend is exposed outside the cluster
-  type: NodePort
-  # Service port
-  port: 3000
+backend:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: salehktk005/simple-node-app
+    pullPolicy: IfNotPresent
+    tag: "v1"
+  service:
+    type: ClusterIP
+    port: 5000
+  containerPort: 5000
+  env:
+    PORT: "5000"
+    SERVICE_NAME: "backend"
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 5000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 5000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
 # --------------------------------------------------
 # Ingress Configuration
@@ -83,66 +137,12 @@ ingress:
   className: ""
   annotations: {}
   hosts:
-    - host: chart-example.local
+    - host: parallax.local
       paths:
         - path: /
-          pathType: ImplementationSpecific
+          pathType: Prefix
+          serviceName: frontend
+        - path: /api
+          pathType: Prefix
+          serviceName: backend
   tls: []
-
-# --------------------------------------------------
-# Resource Requests and Limits
-# --------------------------------------------------
-resources:
-  requests:
-    cpu: 250m
-    memory: 256Mi
-  limits:
-    cpu: 500m
-    memory: 512Mi
-
-# --------------------------------------------------
-# Liveness Probe
-# --------------------------------------------------
-livenessProbe:
-  httpGet:
-    path: /health
-    port: 3000
-  initialDelaySeconds: 10
-  periodSeconds: 10
-
-# --------------------------------------------------
-# Readiness Probe
-# --------------------------------------------------
-readinessProbe:
-  httpGet:
-    path: /health
-    port: 3000
-  initialDelaySeconds: 5
-  periodSeconds: 5
-
-# --------------------------------------------------
-# Autoscaling
-# --------------------------------------------------
-autoscaling:
-  enabled: true
-  minReplicas: 2
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
-
-# --------------------------------------------------
-# Additional Volumes
-# --------------------------------------------------
-volumes: []
-
-# --------------------------------------------------
-# Additional Volume Mounts
-# --------------------------------------------------
-volumeMounts: []
-
-# --------------------------------------------------
-# Node Scheduling
-# --------------------------------------------------
-nodeSelector: {}
-tolerations: []
-affinity: {}
