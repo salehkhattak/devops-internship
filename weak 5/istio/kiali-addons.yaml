@@ -1,0 +1,38 @@
+# Manifest references and instructions for installing Prometheus and Kiali addons in Istio
+# Addons can be installed directly using Istio sample manifests or Helm charts.
+
+# Command to deploy Prometheus & Kiali addons:
+# kubectl apply -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/prometheus.yaml
+# kubectl apply -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/kiali.yaml
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kiali
+  namespace: istio-system
+  labels:
+    app.kubernetes.io/name: kiali
+    app.kubernetes.io/instance: kiali
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kiali
+rules:
+- apiGroups: [""]
+  resources:
+  - namespaces
+  - pods
+  - services
+  - endpoints
+  - configmaps
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources:
+  - deployments
+  - statefulsets
+  - daemonsets
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["networking.istio.io", "security.istio.io"]
+  resources: ["*"]
+  verbs: ["get", "list", "watch"]

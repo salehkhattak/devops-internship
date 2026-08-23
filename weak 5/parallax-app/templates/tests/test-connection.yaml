@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "parallax-app.fullname" . }}-test-connection"
+  labels:
+    {{- include "parallax-app.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['http://{{ include "parallax-app.backend.fullname" . }}:5000/health']
+  restartPolicy: Never

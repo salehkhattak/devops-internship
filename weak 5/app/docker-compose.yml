@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  node-app:
+    build: .
+    container_name: simple-node-app
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+   
+    networks:
+      - node-app-network
+
+networks:
+  node-app-network:
+    driver: bridge
