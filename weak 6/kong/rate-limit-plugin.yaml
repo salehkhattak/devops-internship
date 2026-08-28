@@ -1,0 +1,9 @@
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: rate-limit
+  namespace: parallax
+plugin: rate-limiting
+config:
+  minute: 5
+  policy: local

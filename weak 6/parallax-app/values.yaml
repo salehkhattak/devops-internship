@@ -1,0 +1,158 @@
+# Default values for parallax-app (Week 5: Istio Service Mesh & mTLS).
+# Configuration for Frontend and Backend microservices.
+
+# --------------------------------------------------
+# Chart Overrides
+# --------------------------------------------------
+nameOverride: ""
+fullnameOverride: ""
+
+# --------------------------------------------------
+# Service Account
+# --------------------------------------------------
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+# --------------------------------------------------
+# ConfigMap Configuration
+# --------------------------------------------------
+configMap:
+  enabled: true
+  name: "app-config"
+  data:
+    APP_ENV: "production"
+    BACKEND_URL: "http://backend-service:5000"
+
+# --------------------------------------------------
+# Secret Configuration
+# --------------------------------------------------
+secret:
+  enabled: true
+  name: "app-secret"
+  data:
+    API_KEY: "parallax123"
+
+# --------------------------------------------------
+# Frontend Microservice Configuration
+# --------------------------------------------------
+frontend:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: salehktk005/simple-node-app
+    pullPolicy: IfNotPresent
+    tag: "v1"
+  service:
+    type: NodePort
+    port: 3000
+    annotations:
+      konghq.com/plugins: rate-limit
+  containerPort: 3000
+  env:
+    PORT: "3000"
+    SERVICE_NAME: "frontend"
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+  podAnnotations:
+    sidecar.istio.io/inject: "true"
+  podLabels:
+    app: frontend
+    version: v1
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# --------------------------------------------------
+# Backend Microservice Configuration
+# --------------------------------------------------
+backend:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: salehktk005/simple-node-app
+    pullPolicy: IfNotPresent
+    tag: "v1"
+  service:
+    type: ClusterIP
+    port: 5000
+    annotations:
+      konghq.com/plugins: key-auth
+  containerPort: 3000
+  env:
+    PORT: "3000"
+    SERVICE_NAME: "backend"
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+  podAnnotations:
+    sidecar.istio.io/inject: "true"
+  podLabels:
+    app: backend
+    version: v1
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# --------------------------------------------------
+# Ingress Configuration
+# --------------------------------------------------
+ingress:
+  enabled: true
+  className: "kong"
+  annotations: {}
+  hosts:
+    - host: parallax.local
+      paths:
+        - path: /
+          pathType: Prefix
+          serviceName: frontend
+        - path: /api
+          pathType: Prefix
+          serviceName: backend
+  tls: []

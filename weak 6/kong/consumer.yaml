@@ -1,0 +1,20 @@
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: my-consumer
+  namespace: parallax
+  annotations:
+    kubernetes.io/ingress.class: kong
+username: api-user
+credentials:
+  - my-api-key
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-api-key
+  namespace: parallax
+type: Opaque
+stringData:
+  kongCredType: key-auth
+  key: secret123
