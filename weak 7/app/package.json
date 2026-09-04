@@ -1,0 +1,22 @@
+{
+  "name": "parallax-microservice",
+  "version": "1.0.0",
+  "description": "Node.js microservice application with Istio Service Mesh & mTLS integration",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "lint": "node --check app.js && echo 'Lint passed: No syntax errors found'",
+    "test": "node tests/unit.test.js"
+  },
+  "keywords": [
+    "kubernetes",
+    "istio",
+    "mtls",
+    "helm",
+    "microservices",
+    "ci-cd",
+    "github-actions"
+  ],
+  "author": "Saleh Khattak",
+  "license": "ISC"
+}
