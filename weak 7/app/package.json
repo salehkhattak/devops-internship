@@ -5,8 +5,8 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "lint": "node --check app.js && echo 'Lint passed: No syntax errors found'",
-    "test": "node tests/unit.test.js"
+    "test": "node tests/unit.test.js",
+    "lint": "node --check app.js && echo 'Lint passed: No syntax errors found'"
   },
   "keywords": [
     "kubernetes",
@@ -17,10 +17,6 @@
     "ci-cd",
     "github-actions"
   ],
-  "scripts": {
-  "test": "node tests/unit.test.js",
-  "lint": "node --check app.js && echo 'Lint passed: No syntax errors found'"
-},
   "author": "Saleh Khattak",
   "license": "ISC"
 }
