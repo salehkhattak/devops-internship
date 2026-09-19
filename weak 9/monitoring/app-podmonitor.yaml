@@ -1,0 +1,23 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: parallax-istio-proxies
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - parallax
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - frontend
+          - backend
+  podMetricsEndpoints:
+    - name: istio-proxy
+      port: http-envoy-prom
+      path: /stats/prometheus
+      interval: 15s

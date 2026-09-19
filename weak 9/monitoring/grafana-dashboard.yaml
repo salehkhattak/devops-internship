@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: parallax-observability-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  parallax-observability.json: |-
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "panels": [
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []}, "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}, "id": 1, "targets": [{"expr": "sum(rate(istio_requests_total{destination_service_namespace=\"parallax\"}[5m])) by (destination_service_name)", "legendFormat": "{{destination_service_name}}", "refId": "A"}], "title": "Service request rate", "type": "timeseries"},
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}, "overrides": []}, "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}, "id": 2, "targets": [{"expr": "100 * sum(rate(istio_requests_total{destination_service_namespace=\"parallax\",response_code=~\"[45]..\"}[5m])) by (destination_service_name) / sum(rate(istio_requests_total{destination_service_namespace=\"parallax\"}[5m])) by (destination_service_name)", "legendFormat": "{{destination_service_name}}", "refId": "A"}], "title": "HTTP error rate", "type": "timeseries"},
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "fieldConfig": {"defaults": {"unit": "ms"}, "overrides": []}, "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}, "id": 3, "targets": [{"expr": "histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{destination_service_namespace=\"parallax\"}[5m])) by (le, destination_service_name))", "legendFormat": "p95 {{destination_service_name}}", "refId": "A"}], "title": "p95 request latency", "type": "timeseries"},
+        {"datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"}, "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []}, "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}, "id": 4, "targets": [{"expr": "sum(rate(kong_http_requests_total[5m])) by (service)", "legendFormat": "Kong {{service}}", "refId": "A"}], "title": "Kong gateway request rate", "type": "timeseries"}
+      ],
+      "refresh": "15s",
+      "schemaVersion": 39,
+      "time": {"from": "now-15m", "to": "now"},
+      "title": "Parallax Services and Kong",
+      "uid": "parallax-observability",
+      "version": 1
+    }
