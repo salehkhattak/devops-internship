@@ -1,0 +1,27 @@
+alertmanager:
+  enabled: true
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      receiver: mock-webhook
+      group_by: [alertname, namespace, service]
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 4h
+      routes:
+        - matchers:
+            - severity="critical"
+          receiver: mock-webhook
+          group_wait: 0s
+          repeat_interval: 1h
+        - matchers:
+            - severity="warning"
+          receiver: mock-webhook
+          group_wait: 30s
+          repeat_interval: 6h
+    receivers:
+      - name: mock-webhook
+        webhook_configs:
+          - url: http://alertmanager-webhook.monitoring.svc.cluster.local:8080/alerts
+            send_resolved: true
