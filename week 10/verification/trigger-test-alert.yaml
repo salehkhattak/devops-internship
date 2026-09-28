@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/monitoring.coreos.com/prometheusrule_v1.json
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: alertmanager-delivery-test
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: week10.alertmanager-test
+      rules:
+        - alert: Week10AlertmanagerDeliveryTest
+          expr: vector(1)
+          labels:
+            severity: warning
+          annotations:
+            summary: Temporary Week 10 notification delivery check
+            description: This temporary alert verifies the Alertmanager webhook receiver.
