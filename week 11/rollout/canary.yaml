@@ -1,0 +1,169 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: parallax-frontend-gateway
+  namespace: parallax
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - parallax.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: parallax-release-parallax-app-frontend
+  namespace: parallax
+  labels:
+    app: frontend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http-web
+      protocol: TCP
+  selector:
+    app: frontend
+    rollout: parallax-frontend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: parallax-frontend-canary
+  namespace: parallax
+  labels:
+    app: frontend
+spec:
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http-web
+      protocol: TCP
+  selector:
+    app: frontend
+    rollout: parallax-frontend
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: parallax-frontend
+  namespace: parallax
+spec:
+  hosts:
+    - parallax.local
+  gateways:
+    - parallax-frontend-gateway
+  http:
+    - name: primary
+      route:
+        - destination:
+            host: parallax-release-parallax-app-frontend.parallax.svc.cluster.local
+            port:
+              number: 3000
+          weight: 100
+        - destination:
+            host: parallax-frontend-canary.parallax.svc.cluster.local
+            port:
+              number: 3000
+          weight: 0
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: parallax-frontend
+  namespace: parallax
+spec:
+  replicas: 4
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: frontend
+      rollout: parallax-frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        rollout: parallax-frontend
+        version: canary
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+        - name: frontend
+          image: salehktk005/simple-node-app:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http-web
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "3000"
+            - name: SERVICE_NAME
+              value: frontend
+            - name: APP_ENV
+              value: production
+            - name: BACKEND_URL
+              value: http://parallax-release-parallax-app-backend.parallax.svc.cluster.local:5000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http-web
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http-web
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+  strategy:
+    canary:
+      stableService: parallax-release-parallax-app-frontend
+      canaryService: parallax-frontend-canary
+      trafficRouting:
+        istio:
+          virtualService:
+            name: parallax-frontend
+            routes:
+              - primary
+      maxSurge: 25%
+      maxUnavailable: 0
+      steps:
+        - setWeight: 10
+        - pause:
+            duration: 2m
+        - analysis:
+            templates:
+              - templateName: parallax-canary-metrics
+        - setWeight: 25
+        - pause:
+            duration: 2m
+        - analysis:
+            templates:
+              - templateName: parallax-canary-metrics
+        - setWeight: 50
+        - pause:
+            duration: 2m
+        - analysis:
+            templates:
+              - templateName: parallax-canary-metrics
+        - setWeight: 100
+        - pause:
+            duration: 2m
+        - analysis:
+            templates:
+              - templateName: parallax-canary-metrics

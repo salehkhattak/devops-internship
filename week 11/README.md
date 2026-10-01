@@ -1,60 +1,75 @@
-# Week 11: Alerting and Runbooks
+# Week 11: Metric-Gated Canary Deployments
 
-This week carries the Week 10 Alertmanager implementation forward as a repeatable deployment. It layers severity-based notification routing, three Parallax service-health alerts, an in-cluster mock webhook, and a deliberate delivery test onto the Week 9 Prometheus/Grafana stack.
+This week extends the Week 9 Prometheus/Istio telemetry with Argo Rollouts. The frontend is progressively shifted through 10%, 25%, 50%, and 100% canary traffic using Istio weighted routing. At every stage, Prometheus checks the canary's 5xx ratio and p95 latency; a failed analysis aborts the rollout and restores 100% stable traffic.
 
 ## Contents
 
 ```text
 week 11/
 ├── monitoring/
-│   ├── alertmanager-values.yaml
-│   ├── alertmanager-webhook.yaml
-│   └── prometheus-rules.yaml
+│   └── canary-analysis.yaml       # Prometheus error-rate and p95 gates
+├── rollout/
+│   └── canary.yaml                # Istio Gateway, VirtualService, Services, Rollout
 ├── scripts/
-│   ├── install-alerting.ps1
-│   └── verify-alerting.ps1
+│   ├── install-canary.ps1         # Installs monitoring, controller, and canary resources
+│   └── verify-canary-rollback.ps1 # Forces metric analysis failure and verifies rollback
 └── verification/
-    └── trigger-test-alert.yaml
 ```
 
-## Prerequisites and Installation
+## Prerequisites and Install
 
-- Kubernetes with the Parallax application in namespace `parallax`.
-- Helm 3 and `kubectl` configured for the cluster.
-- Week 9 monitoring files in the sibling `weak 9/` directory.
+- A Kubernetes cluster with Istio installed, including the `istio-ingressgateway` workload, and Helm 3 / `kubectl` configured.
+- The Week 5 Helm chart and Week 10 alerting deliverable in sibling `weak 5/` and `week 10/` directories. Week 10 installs the Week 9 Prometheus stack.
+- Prometheus Operator CRDs installed by the Week 9 kube-prometheus-stack.
 
 From the repository root in PowerShell:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\week 11\scripts\install-alerting.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\week 11\scripts\install-canary.ps1"
 ```
 
-The installer deploys the Week 9 monitoring stack, applies this week's Alertmanager receiver configuration, and registers the three alert rules.
+The installer applies the Week 10 Alertmanager/Prometheus setup, installs the Argo Rollouts controller, disables the chart-managed frontend Deployment, and creates the Rollout resources. The backend remains managed by the Week 5 Helm release. Route external frontend requests through the Istio ingress gateway using host `parallax.local`; direct requests to old NodePort addresses do not pass through the weighted VirtualService.
 
-## Alert Runbook
-
-| Alert | Severity | Trigger | Response |
-|---|---|---|---|
-| `ParallaxHighLatency` | Warning | Istio p95 latency in `parallax` exceeds 1,000 ms for 5 minutes. | Inspect Grafana latency/request-rate panels, pod CPU/memory, recent deployments, and downstream latency. Roll back or scale the responsible service if indicated; confirm p95 is below 1,000 ms. |
-| `ParallaxHighErrorRate` | Critical | More than 5% of Istio requests in `parallax` return 5xx for 2 minutes. | Review the error-rate panel and `kubectl logs -n parallax deploy/<deployment> --since=10m`. Check backend health, service endpoints, and recent rollouts. Restore the last known healthy version/dependency and confirm 5xx falls below 5%. |
-| `ParallaxPodCrashLooping` | Critical | A container in `parallax` stays in `CrashLoopBackOff` for 2 minutes. | Run `kubectl describe pod -n parallax <pod>` and `kubectl logs -n parallax <pod> --previous`. Fix startup/configuration or dependency failures; confirm replacement pods become Ready and the alert resolves. |
-
-Critical notifications route immediately; warnings wait 30 seconds for grouping. Resolved alerts are also sent. Tune thresholds against observed traffic before treating them as production SLOs.
-
-## Trigger and Verify a Notification
-
-After installation, run:
+The initial canary image is `salehktk005/simple-node-app:v1`. For a release, set the image on `rollout/canary.yaml` to the new immutable image tag and apply it:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\week 11\scripts\verify-alerting.ps1"
+kubectl apply -f ".\week 11\rollout\canary.yaml"
 ```
 
-The script applies a temporary always-firing rule, waits up to 150 seconds for `Week11AlertmanagerDeliveryTest` in the mock webhook logs, then removes the rule. This checks rule discovery, routing, and delivery without killing application pods. To inspect received payloads manually, run `kubectl logs -n monitoring deployment/alertmanager-webhook --since=10m`.
+## Promotion and Automated Rollback
+
+| Stage | Traffic to canary | Gate |
+|---|---:|---|
+| 1 | 10% | 2-minute observation, then three Prometheus measurements |
+| 2 | 25% | 2-minute observation, then three Prometheus measurements |
+| 3 | 50% | 2-minute observation, then three Prometheus measurements |
+| 4 | 100% | 2-minute observation, then final analysis before promotion |
+
+Each analysis interval is one minute. It aborts if no canary traffic is observed, the canary 5xx ratio is at least 5%, or p95 latency is at least 1,000 ms. The queries select Istio metrics for the canary Service specifically, and a missing traffic signal fails closed rather than treating absent metrics as healthy.
+
+On analysis failure, Argo Rollouts aborts the update, resets the Istio route to 100% stable, and keeps the stable ReplicaSet serving. Investigate the failed AnalysisRun and canary logs before publishing another image:
+
+```powershell
+kubectl get rollout parallax-frontend -n parallax -o wide
+kubectl get analysisrun -n parallax
+kubectl logs -n parallax -l app=frontend,rollout=parallax-frontend --all-containers --since=10m
+```
+
+Fix the application or configuration, publish a new image tag, update the image in `rollout/canary.yaml`, and apply it to begin a new rollout.
+
+## Verify a Failed-Metric Rollback
+
+Run after installation, while the rollout is `Healthy`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\week 11\scripts\verify-canary-rollback.ps1"
+```
+
+The test temporarily changes the error-rate success threshold to an impossible value, triggers a new Rollout revision, and waits for Argo Rollouts to mark it `Degraded`. It verifies that the stable Service selects the stable ReplicaSet, restores the production analysis threshold, and returns the Rollout to `Healthy`. No application code or image is modified by the test.
 
 ## Troubleshooting
 
-- Check pod state: `kubectl get pods -n monitoring`.
-- Check registered rules: `kubectl get prometheusrule -n monitoring`.
-- Inspect Alertmanager at `http://localhost:9093` after running `kubectl port-forward -n monitoring svc/kube-prometheus-stack-alertmanager 9093:9093`.
-- If the three operational rules do not fire, confirm their metrics and Week 9 scrape targets exist. Latency/error alerts need traffic; CrashLoopBackOff needs a failing container.
-- The mock receiver stores notifications in pod logs and is for verification only, not durable production alerting.
+- Check `kubectl get pods -n argo-rollouts` and `kubectl get rollout -n parallax`.
+- Confirm Prometheus is reachable at `kube-prometheus-stack-prometheus.monitoring.svc:9090` and inspect `kubectl get analysisrun -n parallax`.
+- Check the Istio route with `kubectl get virtualservice parallax-frontend -n parallax -o yaml`; weighted destinations are updated by the Rollouts controller.
+- `kubectl get gateway,virtualservice -n parallax` should show the frontend gateway and route. Requests sent directly to the Service from a non-mesh client bypass Istio traffic weighting.

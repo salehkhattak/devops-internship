@@ -1,0 +1,54 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: parallax-canary-metrics
+  namespace: parallax
+spec:
+  metrics:
+    - name: canary-error-rate
+      interval: 1m
+      count: 3
+      successCondition: result[0] < 0.05
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+          query: |
+            (
+              sum(rate(istio_requests_total{
+                destination_service_namespace="parallax",
+                destination_service_name="parallax-frontend-canary",
+                response_code=~"5.."
+              }[2m]))
+              /
+              clamp_min(sum(rate(istio_requests_total{
+                destination_service_namespace="parallax",
+                destination_service_name="parallax-frontend-canary"
+              }[2m])), 0.001)
+            ) or vector(0)
+    - name: canary-p95-latency
+      interval: 1m
+      count: 3
+      successCondition: result[0] < 1000
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+          query: |
+            histogram_quantile(
+              0.95,
+              sum(rate(istio_request_duration_milliseconds_bucket{
+                destination_service_namespace="parallax",
+                destination_service_name="parallax-frontend-canary"
+              }[2m])) by (le)
+            ) or vector(0)
+    - name: canary-traffic-present
+      interval: 1m
+      count: 3
+      successCondition: result[0] > 0
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+          query: |
+            sum(rate(istio_requests_total{
+              destination_service_namespace="parallax",
+              destination_service_name="parallax-frontend-canary"
+            }[2m])) or vector(0)
