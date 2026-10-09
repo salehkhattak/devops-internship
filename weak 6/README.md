@@ -9,6 +9,8 @@ This folder contains the implementation for Week 6 of the DevOps internship. The
 - **API Key Authentication**: Secured the backend (`/api`) route with the `key-auth` plugin, requiring consumers to pass a valid `apikey` header.
 - **Automated Testing**: Created PowerShell scripts to automatically verify the rate limiting and authentication functionality.
 
+The Helm chart includes the Kong rate-limit/key-auth plugins and demo consumer when `ingress.enabled` is true, so ArgoCD applies the gateway configuration together with the app. The committed `secret123` API key is for local demonstrations only; replace it with a managed secret before exposing a non-demo environment.
+
 ## Directory Structure
 - `parallax-app/`: The Helm chart for our frontend and backend microservices, now updated to utilize Kong ingress and plugin annotations.
 - `kong/`: Kubernetes manifests for Kong custom resources:

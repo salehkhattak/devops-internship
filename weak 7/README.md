@@ -2,7 +2,7 @@
 
 This week focuses on implementing a Continuous Integration (CI) pipeline for the Parallax microservice using GitHub Actions.
 
-The pipeline automatically runs linting and unit tests on code changes, then builds and publishes a Docker image to GitHub Container Registry (GHCR) when changes are pushed to the `main` branch.
+The pipeline automatically runs linting and unit tests on code changes, then builds and publishes a Docker image to GitHub Container Registry (GHCR) when changes are pushed to the `main` branch. On `main`, it also commits the immutable image tag to the Week 6 Helm chart; ArgoCD reconciles that GitOps change into the cluster.
 
 ## Objectives
 
@@ -13,6 +13,7 @@ The pipeline automatically runs linting and unit tests on code changes, then bui
 - Push the Docker image to GitHub Container Registry.
 - Tag Docker images using the Git commit SHA.
 - Publish images only from the `main` branch.
+- Update the GitOps chart so ArgoCD deploys the published image.
 - Verify the complete CI pipeline through GitHub Actions.
 
 ## Project Structure
@@ -84,7 +85,15 @@ weak 7/
                       ▼
               ┌───────────────┐
               │ Push to GHCR   │
-              └───────────────┘
+              └───────┬───────┘
+                      │
+                      ▼
+              ┌──────────────────────┐
+              │ Update Week 6 values │
+              └──────────┬───────────┘
+                         │
+                         ▼
+                     ArgoCD sync
 ```
 
 ### Linting
@@ -212,16 +221,18 @@ When changes are pushed to `main` and linting and tests pass:
 - Docker Build
 - Login to GHCR
 - Push Docker Image
+- Update frontend/backend image tags in `weak 6/parallax-app/values.yaml`
+- Push the GitOps update to `main`; ArgoCD syncs the chart
 
 Pull requests targeting `main` run the lint and test stage but do not publish a Docker image.
 
 ### GitHub Actions Permissions
 
-The Docker publishing job requires permission to write packages:
+The Docker publishing and GitOps update job requires permission to write packages and repository contents:
 
 ```yaml
 permissions:
-  contents: read
+  contents: write
   packages: write
 ```
 
@@ -243,6 +254,8 @@ After pushing changes to GitHub:
 8. Open the repository's **Packages** section.
 9. Verify that the `parallax-microservice` image exists.
 10. Verify that the image is tagged with the Git commit SHA.
+11. Verify that the workflow commits the new tag to `weak 6/parallax-app/values.yaml`.
+12. Confirm that ArgoCD reports the `parallax-app` Application as `Synced` and `Healthy`.
 
 #### Pull the Published Image
 
@@ -274,16 +287,13 @@ Through this task, I learned how to:
 
 ## Future Improvements
 
-Possible improvements to the CI pipeline include:
+Possible future improvements to the CI pipeline include:
 
 - Add Trivy security scanning.
 - Add Docker image vulnerability scanning.
 - Add code coverage reporting.
 - Add Docker image caching.
 - Add semantic version tags.
-- Add automated deployment to Kubernetes.
-- Implement Continuous Deployment (CD) using Argo CD.
-- Add Prometheus and Grafana monitoring.
 
 ## Week 7 Result
 
@@ -294,6 +304,7 @@ The project now has an automated CI pipeline that:
 - ✅ Builds Docker images
 - ✅ Tags images with Git commit SHA
 - ✅ Publishes images to GHCR
+- ✅ Updates the GitOps image tag for ArgoCD deployment
 - ✅ Runs automatically through GitHub Actions
 
 ---

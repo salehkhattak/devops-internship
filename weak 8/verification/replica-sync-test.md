@@ -8,13 +8,13 @@ This test proves that a Git change is reconciled by ArgoCD without a manual depl
 
    ```bash
    date -u
-   kubectl -n parallax get deployment parallax-frontend -o wide
+   kubectl -n parallax get deployment parallax-release-parallax-app-frontend -o wide
    argocd app get parallax-app
    ```
 
    Record the UTC time and confirm `frontend.replicaCount: 2` is healthy.
 
-2. Change only `frontend.replicaCount` in `weak 4/parallax-app/values.yaml` from `2` to `3`.
+2. Change only `frontend.replicaCount` in `weak 6/parallax-app/values.yaml` from `2` to `3`.
 
 3. Commit and push the change. Record the exact GitHub push time in UTC.
 
@@ -22,7 +22,7 @@ This test proves that a Git change is reconciled by ArgoCD without a manual depl
 
    ```bash
    argocd app get parallax-app --refresh
-   kubectl -n parallax get deployment parallax-frontend -w
+   kubectl -n parallax get deployment parallax-release-parallax-app-frontend -w
    argocd app wait parallax-app --sync --health --timeout 180
    ```
 

@@ -31,6 +31,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate GitOps image updater
+        run: node --check "../../weak12/scripts/update-gitops-image.mjs"
+
       - name: Run lint
         run: npm run lint
 
@@ -46,7 +49,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
@@ -60,13 +63,33 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker image
+      - name: Prepare image name
+        id: image
+        run: |
+          owner_lc="$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          echo "repository=ghcr.io/${owner_lc}/parallax-microservice" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push Docker image
         run: |
           docker build \
-            -t ghcr.io/${{ github.repository_owner }}/parallax-microservice:${{ github.sha }} \
+            -t "${{ steps.image.outputs.repository }}:${GITHUB_SHA}" \
             "weak 7/app"
+          docker push "${{ steps.image.outputs.repository }}:${GITHUB_SHA}"
 
-      - name: Push Docker image
+      - name: Update ArgoCD desired image
         run: |
-          docker push \
-            ghcr.io/${{ github.repository_owner }}/parallax-microservice:${{ github.sha }}
+          node "weak12/scripts/update-gitops-image.mjs" \
+            "${{ steps.image.outputs.repository }}" \
+            "${GITHUB_SHA}"
+
+      - name: Commit GitOps image update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "weak 6/parallax-app/values.yaml"
+          if git diff --cached --quiet; then
+            echo "The GitOps image reference is already current."
+            exit 0
+          fi
+          git commit -m "chore(gitops): deploy ${GITHUB_SHA}"
+          git push origin HEAD:main

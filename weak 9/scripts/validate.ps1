@@ -11,7 +11,7 @@ if (-not (Get-Command kubectl -ErrorAction SilentlyContinue)) {
 }
 
 Write-Host "Validating Helm values..."
-helm template kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring --values (Join-Path $week "monitoring\values.yaml") | Out-Null
+helm template kube-prometheus-stack prometheus-community/kube-prometheus-stack --version 92.2.0 --namespace monitoring --values (Join-Path $week "monitoring\values.yaml") | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Prometheus stack Helm rendering failed." }
 
 Write-Host "Validating Kubernetes manifests..."

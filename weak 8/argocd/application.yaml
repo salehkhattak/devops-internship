@@ -8,11 +8,11 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/REPLACE_WITH_OWNER/REPOSITORY.git
+    repoURL: https://github.com/salehkhattak/devops-internship.git
     targetRevision: main
-    path: weak 4/parallax-app
+    path: weak 6/parallax-app
     helm:
-      releaseName: parallax
+      releaseName: parallax-release
   destination:
     server: https://kubernetes.default.svc
     namespace: parallax

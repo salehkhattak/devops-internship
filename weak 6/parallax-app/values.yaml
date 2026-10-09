@@ -24,7 +24,7 @@ configMap:
   name: "app-config"
   data:
     APP_ENV: "production"
-    BACKEND_URL: "http://backend-service:5000"
+    BACKEND_URL: "http://parallax-release-parallax-app-backend.parallax.svc.cluster.local:5000"
 
 # --------------------------------------------------
 # Secret Configuration

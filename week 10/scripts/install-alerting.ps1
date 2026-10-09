@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 $root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $week9 = Join-Path $root "weak 9"
 $week10 = Join-Path $root "week 10"
+$chartVersion = "92.2.0"
 
 & (Join-Path $week9 "scripts\install-monitoring.ps1")
 if ($LASTEXITCODE -ne 0) { throw "Week 9 monitoring installation failed." }
@@ -10,6 +11,7 @@ if ($LASTEXITCODE -ne 0) { throw "Week 9 monitoring installation failed." }
 kubectl apply -f (Join-Path $week10 "monitoring\alertmanager-webhook.yaml")
 if ($LASTEXITCODE -ne 0) { throw "Mock webhook deployment failed." }
 helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack `
+    --version $chartVersion `
     --namespace monitoring `
     --values (Join-Path $week9 "monitoring\values.yaml") `
     --values (Join-Path $week10 "monitoring\alertmanager-values.yaml") `

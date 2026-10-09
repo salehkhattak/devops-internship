@@ -2,9 +2,10 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WEEK="$ROOT/weak 9"
+CHART_VERSION="92.2.0"
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
-helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace --values "$WEEK/monitoring/values.yaml" --wait --timeout 10m
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack --version "$CHART_VERSION" --namespace monitoring --create-namespace --values "$WEEK/monitoring/values.yaml" --wait --timeout 10m
 kubectl apply -f "$WEEK/monitoring/app-podmonitor.yaml"
 kubectl apply -f "$WEEK/monitoring/kong-servicemonitor.yaml"
 kubectl apply -f "$WEEK/monitoring/kong-prometheus-plugin.yaml"
