@@ -42,9 +42,9 @@ frontend:
   enabled: true
   replicaCount: 2
   image:
-    repository: salehktk005/simple-node-app
+    repository: ghcr.io/salehkhattak/parallax-microservice
     pullPolicy: IfNotPresent
-    tag: "v1"
+    tag: "0c8ec1dd0bda28240cb5a5fbc4a8951f313adb63"
   service:
     type: NodePort
     port: 3000
@@ -94,9 +94,9 @@ backend:
   enabled: true
   replicaCount: 2
   image:
-    repository: salehktk005/simple-node-app
+    repository: ghcr.io/salehkhattak/parallax-microservice
     pullPolicy: IfNotPresent
-    tag: "v1"
+    tag: "0c8ec1dd0bda28240cb5a5fbc4a8951f313adb63"
   service:
     type: ClusterIP
     port: 5000
